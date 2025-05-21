@@ -1,4 +1,4 @@
-create table dataplatform.stage.orders3
+create table dataplatform.stage.orders4
 (
     order_id int,
     order_date date,
