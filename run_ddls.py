@@ -17,7 +17,7 @@ SQL_DIR = './sql'
 # Get list of changed .sql files using Git
 def get_changed_sql_files():
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1"],
+        ["git", "diff", "--name-only", "origin/stage...HEAD"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
