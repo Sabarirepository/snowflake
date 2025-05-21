@@ -1,6 +1,6 @@
 create table dataplatform.stage.members
 (
-    member_id int,
+    member_ids int,
     login_start_date date,
     status int
 )
