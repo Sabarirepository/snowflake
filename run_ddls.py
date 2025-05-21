@@ -14,70 +14,62 @@ SNOWFLAKE_WAREHOUSE = 'COMPUTE_WH'
 SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
-def get_current_commit_hash():
-    """Get the current commit hash"""
+def check_branch():
+    """Check if we're on the stage branch"""
     result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
-    return result.stdout.strip()
-
-def get_last_processed_commit():
-    """Get the last processed commit from a tracking file"""
-    try:
-        if os.path.exists('.last_processed_commit'):
-            with open('.last_processed_commit', 'r') as f:
-                return f.read().strip()
-    except:
-        pass
-    return None
-
-def save_current_commit():
-    """Save the current commit as processed"""
-    current_commit = get_current_commit_hash()
-    with open('.last_processed_commit', 'w') as f:
-        f.write(current_commit)
+    current_branch = result.stdout.strip()
+    print(f"🌿 Current branch: {current_branch}")
+    
+    if current_branch != "stage":
+        print("❌ Not on stage branch! This script should only run on the stage branch.")
+        return False
+    return True
 
 def get_changed_sql_files():
-    """
-    Returns SQL files changed between the last processed commit and current commit
-    """
-    current_commit = get_current_commit_hash()
-    last_processed = get_last_processed_commit()
-    
-    print(f"🔎 Current commit: {current_commit}")
-    print(f"🔎 Last processed commit: {last_processed or 'None (first run)'}")
+    """Get SQL files changed in the latest commit on stage branch"""
+    try:
+        # Get the latest commit on stage branch
+        result = subprocess.run(
+            ["git", "log", "-1", "--name-only", "--format=", "stage"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"❌ Error getting files from stage branch: {result.stderr}")
+            return []
 
-    if not last_processed:
-        # If first run, only get files in current commit
-        diff_command = ["git", "diff-tree", "-r", "--no-commit-id", "--name-only", "HEAD"]
-    else:
-        # Get files changed since last processed commit
-        diff_command = ["git", "diff", "--name-only", f"{last_processed}", "HEAD"]
+        # Get list of changed files
+        files = result.stdout.strip().split('\n')
+        
+        # Filter for SQL files
+        sql_files = [
+            f for f in files 
+            if f and f.endswith('.sql') and 
+            ('snowflake/sql/' in f or 'sql/' in f or f.startswith('sql/'))
+        ]
 
-    result = subprocess.run(
-        diff_command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+        # Print all found files for debugging
+        print(f"\nAll changed files in latest commit on stage:")
+        for f in files:
+            if f:
+                print(f"  - {f}")
+        
+        print(f"\nSQL files to process:")
+        for f in sql_files:
+            print(f"  - {f}")
+            
+        return sql_files
 
-    if result.returncode != 0:
-        print(f"❌ Error getting changed files: {result.stderr}")
+    except Exception as e:
+        print(f"❌ Error getting changed files: {str(e)}")
         return []
-
-    # Filter for SQL files in specific directories
-    changed_files = [
-        f for f in result.stdout.splitlines()
-        if f.endswith('.sql') and 
-        ('snowflake/sql/' in f or 'sql/' in f) and 
-        os.path.exists(f)
-    ]
-    
-    print(f"📁 Changed SQL files:\n{changed_files}")
-    return changed_files
 
 def execute_sql_file(file_path, cursor):
     """Execute SQL file with error handling"""
@@ -102,23 +94,40 @@ def execute_sql_file(file_path, cursor):
 def main():
     current_time = datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
     print(f"🚀 Script started at (UTC): {current_time}")
+    print(f"👤 Running as user: Sabarirepository")
     
+    # First check if we're on stage branch
+    if not check_branch():
+        return
+    
+    # Print current working directory and its contents
+    print(f"\n📂 Current working directory: {os.getcwd()}")
+    print("📂 SQL files in repository:")
+    for root, dirs, files in os.walk('.'):
+        for f in files:
+            if f.endswith('.sql'):
+                print(f"  - {os.path.join(root, f)}")
+
+    # Make sure we're on stage branch and get latest changes
+    subprocess.run(["git", "checkout", "stage"], capture_output=True, text=True)
+    subprocess.run(["git", "pull", "origin", "stage"], capture_output=True, text=True)
+
     # Get changed SQL files
     sql_files = get_changed_sql_files()
     
     if not sql_files:
-        print("✅ No new SQL files to process. Exiting.")
+        print("\n✅ No SQL files changed in latest commit on stage branch. Exiting.")
         return
     
-    print(f"📁 Found {len(sql_files)} SQL file(s) to execute:")
+    print(f"\n📁 Found {len(sql_files)} SQL file(s) to execute:")
     for f in sql_files:
         print(f"   - {f}")
-        if os.path.exists(f):
+        try:
             with open(f, 'r') as file:
                 print(f"   Content of {f}:")
                 print(file.read())
-        else:
-            print(f"   ❌ File does not exist: {f}")
+        except Exception as e:
+            print(f"   ❌ Error reading file {f}: {str(e)}")
     
     print("\n⏳ Waiting 5 seconds before executing...")
     time.sleep(5)
@@ -141,8 +150,6 @@ def main():
         for sql_file in sql_files:
             execute_sql_file(sql_file, cursor)
         
-        # Save the current commit as processed
-        save_current_commit()
         print("\n✅ All SQL files executed successfully")
         
     except Exception as e:
