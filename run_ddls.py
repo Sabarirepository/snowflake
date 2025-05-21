@@ -20,37 +20,25 @@ def get_last_commit_sql_files():
     """
     # Get the last commit hash
     result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["git", "show", "--name-only", "--format=", "HEAD"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
     if result.returncode != 0:
-        print(f"❌ Error getting last commit: {result.stderr}")
+        print(f"❌ Error getting last commit files: {result.stderr}")
         return []
-        
-    last_commit = result.stdout.strip()
-    print(f"🔎 Last commit hash: {last_commit}")
-
-    # Get files changed in the last commit
-    diff_result = subprocess.run(
-        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", last_commit],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    if diff_result.returncode != 0:
-        print(f"❌ Error getting changed files: {diff_result.stderr}")
-        return []
-
-    # Get all changed files
-    all_changed_files = diff_result.stdout.splitlines()
+    
+    # Get all changed files from the output
+    all_changed_files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
     print(f"📄 All changed files in last commit:\n{all_changed_files}")
 
-    # Filter for .sql files only
+    # Filter for .sql files in snowflake/sql directory
     sql_files = [
         f for f in all_changed_files
-        if f.endswith('.sql') and os.path.exists(f)
+        if f.endswith('.sql') and 
+        ('snowflake/sql' in f or 'sql/' in f) and 
+        os.path.exists(f)
     ]
     
     print(f"📁 SQL files in last commit: {sql_files}")
@@ -65,10 +53,12 @@ def execute_sql_file(file_path, cursor):
     try:
         with open(file_path, 'r') as f:
             sql = f.read()
+            print(f"📄 SQL content loaded:\n{sql}")
+        
         statements = [stmt.strip() for stmt in sql.split(';') if stmt.strip()]
         
         for i, stmt in enumerate(statements, 1):
-            print(f"🔹 Running statement {i}/{len(statements)}: {stmt}")
+            print(f"🔹 Running statement {i}/{len(statements)}:\n{stmt}")
             cursor.execute(stmt)
             print(f"✅ Statement {i} executed successfully")
             
@@ -79,7 +69,18 @@ def execute_sql_file(file_path, cursor):
 def main():
     current_time = datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
     print(f"🚀 Script started at (UTC): {current_time}")
-    print(f"👤 Running as user: Sabarirepository")
+    
+    # Get current directory
+    current_dir = os.getcwd()
+    print(f"📂 Current directory: {current_dir}")
+    
+    # List directory contents
+    print("📂 Directory contents:")
+    for root, dirs, files in os.walk('.'):
+        print(f"Directory: {root}")
+        for f in files:
+            if f.endswith('.sql'):
+                print(f"  SQL file: {os.path.join(root, f)}")
     
     # Get SQL files from last commit
     sql_files = get_last_commit_sql_files()
@@ -91,6 +92,13 @@ def main():
     print(f"📁 Found {len(sql_files)} SQL file(s) to execute:")
     for f in sql_files:
         print(f"   - {f}")
+        # Verify file exists and show content
+        if os.path.exists(f):
+            with open(f, 'r') as file:
+                print(f"   Content of {f}:")
+                print(file.read())
+        else:
+            print(f"   ❌ File does not exist: {f}")
     
     print("\n⏳ Waiting 30 seconds before executing...")
     time.sleep(30)
