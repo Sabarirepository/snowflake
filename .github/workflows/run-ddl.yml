@@ -1,0 +1,25 @@
+name: Run Snowflake DDLs via Python
+
+on:
+  push:
+    branches:
+      - stage
+
+jobs:
+  snowflake-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Snowflake Python Connector
+        run: pip install snowflake-connector-python
+
+      - name: Run SQL Scripts
+        run: python run_ddls.py
