@@ -1,7 +1,6 @@
 import os
-import subprocess
 import snowflake.connector
-import time  # ⏰ Added to enable sleep
+import time
 
 # ❗ WARNING: Do not hardcode credentials in production.
 SNOWFLAKE_ACCOUNT = 'cm17072.south-central-us.azure'
@@ -12,22 +11,15 @@ SNOWFLAKE_WAREHOUSE = 'COMPUTE_WH'
 SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
-# ⛏️ Detect changed .sql files between last commit and current
-def get_changed_sql_files():
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+SQL_DIRECTORY = './sql'
 
-    if result.stderr:
-        print(f"⚠️ Git error: {result.stderr}")
-
-    changed_files = result.stdout.splitlines()
-    print("📁 Changed files:", changed_files)
-
-    sql_files = [f for f in changed_files if f.endswith(".sql") and os.path.exists(f)]
+# 🔍 Find all .sql files under the directory
+def get_all_sql_files():
+    sql_files = []
+    for root, dirs, files in os.walk(SQL_DIRECTORY):
+        for file in files:
+            if file.endswith('.sql'):
+                sql_files.append(os.path.join(root, file))
     return sql_files
 
 # 📜 Read and run SQL
@@ -38,18 +30,18 @@ def execute_sql_file(file_path, cursor):
 
     statements = [stmt.strip() for stmt in sql.split(';') if stmt.strip()]
     for stmt in statements:
-        print(f"🔹 Running statement: {stmt}")
+        print(f"🔹 Running: {stmt}")
         cursor.execute(stmt)
 
 # 🚀 Main flow
 def main():
-    sql_files = get_changed_sql_files()
+    sql_files = get_all_sql_files()
 
     if not sql_files:
-        print("✅ No SQL file changes detected. Skipping execution.")
+        print("✅ No .sql files found in ./sql. Exiting.")
         return
 
-    print("⏳ Waiting 30 seconds before executing SQL...")
+    print(f"📁 Found {len(sql_files)} SQL file(s). Waiting 30 seconds before executing...")
     time.sleep(30)
 
     # Connect to Snowflake
@@ -67,7 +59,7 @@ def main():
     try:
         for sql_file in sql_files:
             execute_sql_file(sql_file, cursor)
-        print("\n✅ All changed SQL files executed successfully.")
+        print("\n✅ All SQL files executed successfully.")
     except Exception as e:
         print(f"❌ Error executing SQL: {e}")
     finally:
