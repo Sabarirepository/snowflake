@@ -12,26 +12,25 @@ SNOWFLAKE_WAREHOUSE = 'COMPUTE_WH'
 SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
-def get_changed_sql_files_since_last_merge():
+def get_sql_files_from_last_merge_commit():
     """
-    Returns a list of .sql files changed since the last merge with the 'stage' branch.
+    Returns list of .sql files changed in the last merge commit on the current branch.
     """
-    # Find the merge base between HEAD and stage
+    # Get last merge commit hash
     result = subprocess.run(
-        ["git", "merge-base", "HEAD", "stage"],
+        ["git", "log", "--merges", "--pretty=format:%H", "-n", "1"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
-    merge_base = result.stdout.strip()
-    if not merge_base:
-        print("❌ Could not find merge base with stage.")
+    last_merge_commit = result.stdout.strip()
+    if not last_merge_commit:
+        print("❌ No merge commits found.")
         return []
-    print(f"🔎 Merge base commit with stage: {merge_base}")
+    print(f"🔎 Last merge commit: {last_merge_commit}")
 
-    # Get changed files since merge base
     diff_result = subprocess.run(
-        ["git", "diff", "--name-only", f"{merge_base}..HEAD"],
+        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", last_merge_commit],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
@@ -40,7 +39,7 @@ def get_changed_sql_files_since_last_merge():
         f for f in diff_result.stdout.splitlines()
         if f.endswith('.sql') and os.path.exists(f)
     ]
-    print(f"📁 Changed .sql files since last merge with stage: {changed_files}")
+    print(f"📁 .sql files in last merge commit: {changed_files}")
     return changed_files
 
 def execute_sql_file(file_path, cursor):
