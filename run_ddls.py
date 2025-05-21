@@ -12,7 +12,7 @@ SNOWFLAKE_WAREHOUSE = 'COMPUTE_WH'
 SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
-def get_sql_files_from_last_merge_commit():
+def get_changed_sql_files_since_last_merge():
     """
     Returns list of .sql files changed in the last merge commit on the current branch.
     """
