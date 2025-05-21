@@ -14,60 +14,73 @@ SNOWFLAKE_WAREHOUSE = 'COMPUTE_WH'
 SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
-def get_last_merge_sql_files():
-    """
-    Returns a list of .sql files that were changed in the most recent merge commit.
-    """
-    # First, get the last merge commit hash
+def get_current_commit_hash():
+    """Get the current commit hash"""
     result = subprocess.run(
-        ["git", "log", "--merges", "-n", "1", "--pretty=format:%H"],
+        ["git", "rev-parse", "HEAD"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
+    return result.stdout.strip()
+
+def get_last_processed_commit():
+    """Get the last processed commit from a tracking file"""
+    try:
+        if os.path.exists('.last_processed_commit'):
+            with open('.last_processed_commit', 'r') as f:
+                return f.read().strip()
+    except:
+        pass
+    return None
+
+def save_current_commit():
+    """Save the current commit as processed"""
+    current_commit = get_current_commit_hash()
+    with open('.last_processed_commit', 'w') as f:
+        f.write(current_commit)
+
+def get_changed_sql_files():
+    """
+    Returns SQL files changed between the last processed commit and current commit
+    """
+    current_commit = get_current_commit_hash()
+    last_processed = get_last_processed_commit()
     
+    print(f"🔎 Current commit: {current_commit}")
+    print(f"🔎 Last processed commit: {last_processed or 'None (first run)'}")
+
+    if not last_processed:
+        # If first run, only get files in current commit
+        diff_command = ["git", "diff-tree", "-r", "--no-commit-id", "--name-only", "HEAD"]
+    else:
+        # Get files changed since last processed commit
+        diff_command = ["git", "diff", "--name-only", f"{last_processed}", "HEAD"]
+
+    result = subprocess.run(
+        diff_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
     if result.returncode != 0:
-        print(f"❌ Error finding last merge commit: {result.stderr}")
-        return []
-        
-    last_merge = result.stdout.strip()
-    if not last_merge:
-        print("❌ No merge commits found in history")
-        return []
-    
-    print(f"🔎 Last merge commit hash: {last_merge}")
-
-    # Get the files changed in that merge commit
-    diff_result = subprocess.run(
-        ["git", "diff-tree", "-r", "--no-commit-id", "--name-only", last_merge],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    
-    if diff_result.returncode != 0:
-        print(f"❌ Error getting changed files: {diff_result.stderr}")
+        print(f"❌ Error getting changed files: {result.stderr}")
         return []
 
-    # Get all changed files from the merge
-    all_changed_files = diff_result.stdout.splitlines()
-    print(f"📄 All files changed in last merge commit:\n{all_changed_files}")
-
-    # Filter for .sql files in the correct directories
-    sql_files = [
-        f for f in all_changed_files
+    # Filter for SQL files in specific directories
+    changed_files = [
+        f for f in result.stdout.splitlines()
         if f.endswith('.sql') and 
-        ('snowflake/sql' in f or 'sql/' in f) and 
+        ('snowflake/sql/' in f or 'sql/' in f) and 
         os.path.exists(f)
     ]
     
-    print(f"📁 SQL files from last merge: {sql_files}")
-    return sql_files
+    print(f"📁 Changed SQL files:\n{changed_files}")
+    return changed_files
 
 def execute_sql_file(file_path, cursor):
-    """
-    Execute SQL file with error handling
-    """
+    """Execute SQL file with error handling"""
     print(f"\n⚙️ Executing SQL file: {file_path}")
     
     try:
@@ -90,14 +103,14 @@ def main():
     current_time = datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
     print(f"🚀 Script started at (UTC): {current_time}")
     
-    # Get SQL files from last merge commit
-    sql_files = get_last_merge_sql_files()
+    # Get changed SQL files
+    sql_files = get_changed_sql_files()
     
     if not sql_files:
-        print("✅ No SQL files in the last merge commit. Exiting.")
+        print("✅ No new SQL files to process. Exiting.")
         return
     
-    print(f"📁 Found {len(sql_files)} SQL file(s) from last merge to execute:")
+    print(f"📁 Found {len(sql_files)} SQL file(s) to execute:")
     for f in sql_files:
         print(f"   - {f}")
         if os.path.exists(f):
@@ -107,8 +120,8 @@ def main():
         else:
             print(f"   ❌ File does not exist: {f}")
     
-    print("\n⏳ Waiting 30 seconds before executing...")
-    time.sleep(30)
+    print("\n⏳ Waiting 5 seconds before executing...")
+    time.sleep(5)
     
     # Connect to Snowflake
     try:
@@ -128,7 +141,9 @@ def main():
         for sql_file in sql_files:
             execute_sql_file(sql_file, cursor)
         
-        print("\n✅ All SQL files from last merge executed successfully")
+        # Save the current commit as processed
+        save_current_commit()
+        print("\n✅ All SQL files executed successfully")
         
     except Exception as e:
         print(f"❌ Error: {str(e)}")
