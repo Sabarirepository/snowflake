@@ -4,20 +4,16 @@ on:
   push:
     branches:
       - stage
-    paths:
-      - 'sql/**.sql'  # Only trigger when SQL files in sql/ directory change
 
 jobs:
   snowflake-deploy:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"  # Skip if commit has [skip ci] tag
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 1  # Only get the latest commit
-          token: ${{ secrets.GITHUB_TOKEN }}  # Needed for pushing archive commits
+          token: ${{ secrets.GITHUB_TOKEN }}  # Added for pushing archive commits
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -26,8 +22,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install snowflake-connector-python pytz
+          pip install snowflake-connector-python
+          pip install pytz
 
       - name: Configure Git
         run: |
