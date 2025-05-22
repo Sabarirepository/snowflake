@@ -16,8 +16,8 @@ SNOWFLAKE_DATABASE = 'DATAPLATFORM'
 SNOWFLAKE_SCHEMA = 'STAGE'
 
 # Constants
-SQL_DIR = "snowflake/sql"
-ARCHIVE_DIR = "snowflake/sql/archive"
+SQL_DIR = "sql"
+ARCHIVE_DIR = "sql/archive"
 
 def log_message(message):
     """Print message with timestamp"""
