@@ -1,0 +1,1 @@
+alter  table dataplatform.stage.members3 add column updated_at datetime;
