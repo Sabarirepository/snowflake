@@ -1,32 +1,38 @@
-name: Run SQL Files
+name: Run Snowflake DDLs via Python
 
 on:
   push:
     branches:
       - stage
     paths:
-      - 'sql/**.sql'  # Only trigger on SQL files in sql directory
+      - 'sql/**.sql'  # Only trigger when SQL files in sql/ directory change
 
 jobs:
-  execute-sql:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"  # Skip if commit message contains [skip ci]
+  snowflake-deploy:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"  # Skip if commit has [skip ci] tag
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1  # Only get the latest commit
+          token: ${{ secrets.GITHUB_TOKEN }}  # Needed for pushing archive commits
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install snowflake-connector-python pytz
 
-      - name: Run SQL files
+      - name: Configure Git
+        run: |
+          git config --global user.name "Sabarirepository"
+          git config --global user.email "sabarirepository@users.noreply.github.com"
+
+      - name: Run SQL Scripts
         run: python run_ddls.py
