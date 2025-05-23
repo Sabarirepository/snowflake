@@ -1,0 +1,5 @@
+snowflake_account   = "cm17072.south-central-us.azure"
+snowflake_username  = "SRUTHIMANI173"
+snowflake_password  = "Sachinindia123*"
+snowflake_role      = "ACCOUNTADMIN"
+snowflake_warehouse = "COMPUTE_WH1"
