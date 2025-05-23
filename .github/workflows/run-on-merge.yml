@@ -21,3 +21,7 @@ jobs:
 
       - name: Run test.py
         run: python test.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          SECRET_ACCESS_KEY: ${{ vars.SECRET_ACCESS_KEY }}
+          REGION: ${{ vars.REGION }}
