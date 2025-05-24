@@ -34,24 +34,4 @@ module "warehouse_module" {
   prod_snowflake_warehouse = var.prod_snowflake_warehouse
   dev_snowflake_warehouse  = var.dev_snowflake_warehouse
   dev_snowflake_warehouse_TEST  = var.dev_snowflake_warehouse_TEST
-  wh_database = var.wh_database
-  wh_schemas = var.wh_schemas
-  
-}
-
-
-
-module "warehouse_data_governance_module" {
-  source = "./userModule"
-  
-  providers = {
-    snowflake.prod = snowflake.prod
-    snowflake.dev  = snowflake.dev
-  }
-
-  prod_wh_roles = var.prod_wh_roles
-  dev_wh_roles  = var.dev_wh_roles
-  prod_wh_users = var.prod_wh_users
-  dev_wh_users = var.dev_wh_users
-  
 }

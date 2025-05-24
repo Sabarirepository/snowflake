@@ -54,37 +54,3 @@ variable "dev_snowflake_warehouse_TEST" {
   description = "Development Snowflake warehouse name"
   type        = string
 }
-
-variable "dev_wh_roles" {
-    description ="Developer Wh Roles"
-    type = list(string)
-}
-
-variable "prod_wh_roles" {
-    description ="Prod Wh Roles" 
-    type = list(string)
-}
-
-
-variable "wh_database" {
-    description ="Datawarehouse databases"
-    type = list(string)
-}
-
-
-variable "dev_wh_users" {
-    description = "Dev wh user"
-    type = list(string)
-}
-
-variable "prod_wh_users" {
-    description = "Prod wh users"
-    type = list(string)
-}
-
-
-variable "wh_schemas" {
-  description = "Standard schemas to create in each DB"
-  type        = list(string)
-  default     = ["bronze", "silver", "gold"]
-}

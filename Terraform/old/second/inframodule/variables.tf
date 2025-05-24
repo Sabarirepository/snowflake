@@ -14,15 +14,3 @@ variable "dev_snowflake_warehouse_TEST" {
   type        = string
 }
 
-
-variable "wh_database" {
-    description ="Datawarehouse databases"
-    type = list(string)
-}
-
-
-variable "wh_schemas" {
-  description = "Standard schemas to create in each DB"
-  type        = list(string)
-  default     = ["bronze", "silver", "gold"]
-}

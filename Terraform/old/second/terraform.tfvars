@@ -10,15 +10,3 @@ dev_snowflake_password  = "Sachinindia123*"
 dev_snowflake_role      = "ACCOUNTADMIN"
 dev_snowflake_warehouse = "DEV_COMPUTE_WH2"
 dev_snowflake_warehouse_TEST = "DEV_COMPUTE_WH_TEST"
-
-
-wh_database = ["pr_dataengineering","dev_dataengineering","qa_dataengineering"]
-wh_schemas = ["bronze", "silver", "gold"]
-
-#roles - wh
-dev_wh_roles = ["dev_wh_manager","dev_wh_dev_plus_role","dev_wh_dev_role"]
-prod_wh_roles = ["prod_wh_manager","prod_wh_dev_plus_role","prod_wh_dev_role"]
-
-#Users
-dev_wh_users  = []
-prod_wh_users  = ["sabari.kk@test.com","kksachin@test.com","tt@test.com","sac@kk.com"]

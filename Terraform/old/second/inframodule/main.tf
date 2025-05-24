@@ -37,39 +37,3 @@ resource "snowflake_warehouse" "dev_wh" {
 #  auto_resume    = true
 #}
 
-
-
-
-#you need separte resource block
-resource "snowflake_database" "wh_databases" {
-  provider       = snowflake.prod
-  for_each       =  toset(var.wh_database)
-  name           = each.key
-}
-
-
-# Create standard schemas in each database
-locals {
-  db_schema_combos = flatten([
-    for db in var.wh_database : [
-      for schema in var.wh_schemas : {
-        db     = db
-        schema = schema
-      }
-    ]
-  ])
-}
-
-resource "snowflake_schema" "standard_schemas" {
-  provider = snowflake.prod
-
-  for_each = {
-    for combo in local.db_schema_combos :
-    "${combo.db}_${combo.schema}" => combo
-  }
-
-  database     = each.value.db
-  name         = each.value.schema
-  is_transient = false
-  comment      = "Auto-created schema for ${each.value.db}.${each.value.schema}"
-}
