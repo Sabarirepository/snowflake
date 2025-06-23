@@ -1,1 +1,0 @@
-alter  table dataplatform.stage.members3 add column created_at datetime;
